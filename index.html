@@ -414,7 +414,7 @@
             </div>
 
             <div class="card">
-                <h3 style="margin-top:0; color:#0f766e;">اختاري الوحدة الدراسية (منهج ثالث متوسط):</h3>
+                <h3 style="margin-top:0; color:#0f766e;">اختر الوحدة الدراسية (منهج ثالث متوسط):</h3>
                 <div class="units-grid">
                     <div class="unit-card active" onclick="selectUnit(1)" id="unitBtn1">الوحدة الأولى: الأمن السيبراني</div>
                     <div class="unit-card locked" onclick="selectUnit(2)" id="unitBtn2" title="أتمي الوحدة الأولى أولاً">الوحدة الثانية: قواعد البيانات 🔒</div>
@@ -434,7 +434,7 @@
 
                 <div id="subTabvideos">
                     <div class="section-header-title">
-                        <span>🎬</span> <span>شاهدي الفيديوهات الخاصة بالوحدة وتأملي المعلومات:</span>
+                        <span>🎬</span> <span>شاهدي الفيديو وتأملي المعلومات:</span>
                     </div>
                     <div class="grid-cards" id="videosGrid"></div>
                 </div>
@@ -646,6 +646,10 @@
         let answeredQuestions = {}; 
         let studentsDatabase = JSON.parse(localStorage.getItem("studentsDatabase_grade3_no_dummy")) || {};
 
+        window.onload = function() {
+            // تهيئة أولية إذا لزم الأمر
+        };
+
         function startPlatform() {
             const inputVal = document.getElementById("studentNameInput").value.trim();
             if(!inputVal) {
@@ -742,7 +746,7 @@
             // إعادة تعيين التبويب النشط إلى الفيديوهات
             switchSubTab('videos', null);
 
-            // فيديوهات الوحدة المحددة فقط
+            // الفيديوهات
             const videosGrid = document.getElementById("videosGrid");
             videosGrid.innerHTML = "";
             unit.videos.forEach(v => {
@@ -756,7 +760,7 @@
                 `;
             });
 
-            // الأنشطة الخاصة بالوحدة
+            // الأنشطة
             const activitiesContainer = document.getElementById("activitiesContainer");
             activitiesContainer.innerHTML = "";
             unit.activities.forEach((act, index) => {
@@ -771,11 +775,11 @@
                         const checkedState = isAnswered && answeredQuestions[`${qKey}_sel`] === oIndex ? 'checked' : '';
                         html += `
                             <label style="display:block; margin: 8px 0; cursor:pointer;">
-                                <input type="radio" name="${qKey}" value="${oIndex}" ${isAnswered ? 'disabled' : ''} ${checkedState}>${opt}
+                                <input type="radio" name="${qKey}" value="${oIndex}" ${isAnswered ? 'disabled' : ''} ${checkedState}> ${opt}
                             </label>
                         `;
                     });
-                    html += `<button class="btn" style="padding: 6px 14px; font-size: 0.85rem; margin-top: 8px;" onclick="checkMCQ('${qKey}',${unitNum}, ${index},${act.correct}, ${act.points})" ${isAnswered ? 'disabled' : ''}>تحقق من الإجابة</button>`;
+                    html += `<button class="btn" style="padding: 6px 14px; font-size: 0.85rem; margin-top: 8px;" onclick="checkMCQ('${qKey}', ${unitNum}, ${index}, ${act.correct}, ${act.points})" ${isAnswered ? 'disabled' : ''}>تحقق من الإجابة</button>`;
                 } else if (act.type === "truefalse") {
                     const checkTrue = isAnswered && answeredQuestions[`${qKey}_sel`] === true ? 'checked' : '';
                     const checkFalse = isAnswered && answeredQuestions[`${qKey}_sel`] === false ? 'checked' : '';
@@ -783,7 +787,7 @@
                         <label style="margin-left: 20px; cursor:pointer;"><input type="radio" name="${qKey}" value="true" ${isAnswered ? 'disabled' : ''} ${checkTrue}> صح</label>
                         <label style="cursor:pointer;"><input type="radio" name="${qKey}" value="false" ${isAnswered ? 'disabled' : ''} ${checkFalse}> خطأ</label>
                         <br>
-                        <button class="btn" style="padding: 6px 14px; font-size: 0.85rem; margin-top: 10px;" onclick="checkTrueFalse('${qKey}',${unitNum}, ${index},${act.correct}, ${act.points})" ${isAnswered ? 'disabled' : ''}>تحقق من الإجابة</button>
+                        <button class="btn" style="padding: 6px 14px; font-size: 0.85rem; margin-top: 10px;" onclick="checkTrueFalse('${qKey}', ${unitNum}, ${index}, ${act.correct}, ${act.points})" ${isAnswered ? 'disabled' : ''}>تحقق من الإجابة</button>
                     `;
                 }
 
@@ -791,4 +795,279 @@
                 if (isAnswered) {
                     const wasCorrect = answeredQuestions[`${qKey}_res`];
                     if(wasCorrect) {
-                        feedbackHtml = `<span
+                        feedbackHtml = `<span class="correct">إجابة صحيحة وموفقة! أحسنتِ (+${act.points} نقاط) 🌟</span>`;
+                    } else {
+                        feedbackHtml = `<span class="incorrect">إجابة غير دقيقة 💡</span>`;
+                    }
+                }
+
+                html += `<div class="feedback" id="feedback_${qKey}">${feedbackHtml}</div>`;
+                html += `</div>`;
+                activitiesContainer.innerHTML += html;
+            });
+
+            // البطاقات السريعة
+            const flashcardsContainer = document.getElementById("flashcardsContainer");
+            flashcardsContainer.innerHTML = "";
+            unit.flashcards.forEach(fc => {
+                flashcardsContainer.innerHTML += `
+                    <div class="question-box" style="background: #f0fdfa; border-color: #99f6e4;">
+                        <p style="color: #0f766e; font-weight: bold; margin-top:0;">💡 ${fc.q}</p>
+                        <p style="color: #334155; margin-bottom: 0;"><strong>الإجابة والتأمل:</strong> ${fc.a}</p>
+                    </div>
+                `;
+            });
+        }
+
+        function checkMCQ(qKey, unitNum, qIndex, correctOpt, actPoints) {
+            const radios = document.getElementsByName(qKey);
+            let selected = -1;
+            for(let i=0; i<radios.length; i++) {
+                if(radios[i].checked) { selected = i; break; }
+            }
+            if(selected === -1) {
+                alert("الرجاء اختيار إجابة أولاً!");
+                return;
+            }
+
+            const feedbackDiv = document.getElementById(`feedback_${qKey}`);
+            answeredQuestions[qKey] = true;
+            answeredQuestions[`${qKey}_sel`] = selected;
+
+            if(selected === correctOpt) {
+                feedbackDiv.innerHTML = `<span class="correct">إجابة صحيحة وموفقة! أحسنتِ (+${actPoints} نقاط) 🌟</span>`;
+                answeredQuestions[`${qKey}_res`] = true;
+                addPoints(actPoints);
+            } else {
+                feedbackDiv.innerHTML = `<span class="incorrect">إجابة غير دقيقة، حاولي مرة أخرى بدقة 💡</span>`;
+                answeredQuestions[`${qKey}_res`] = false;
+            }
+            
+            lockQuestion(qKey);
+            saveStudentDataToStorage();
+        }
+
+        function checkTrueFalse(qKey, unitNum, qIndex, correctVal, actPoints) {
+            const radios = document.getElementsByName(qKey);
+            let selectedVal = null;
+            for(let i=0; i<radios.length; i++) {
+                if(radios[i].checked) { selectedVal = (radios[i].value === "true"); break; }
+            }
+            if(selectedVal === null) {
+                alert("الرجاء اختيار 'صح' أو 'خطأ' أولاً!");
+                return;
+            }
+
+            const feedbackDiv = document.getElementById(`feedback_${qKey}`);
+            answeredQuestions[qKey] = true;
+            answeredQuestions[`${qKey}_sel`] = selectedVal;
+
+            if(selectedVal === correctVal) {
+                feedbackDiv.innerHTML = `<span class="correct">إجابة صحيحة وموفقة! أحسنتِ (+${actPoints} نقاط) 🌟</span>`;
+                answeredQuestions[`${qKey}_res`] = true;
+                addPoints(actPoints);
+            } else {
+                feedbackDiv.innerHTML = `<span class="incorrect">إجابة غير دقيقة، حاولي مرة أخرى بدقة 💡</span>`;
+                answeredQuestions[`${qKey}_res`] = false;
+            }
+            
+            lockQuestion(qKey);
+            saveStudentDataToStorage();
+        }
+
+        function lockQuestion(qKey) {
+            const radios = document.getElementsByName(qKey);
+            for(let i=0; i<radios.length; i++) radios[i].disabled = true;
+        }
+
+        function addPoints(val) {
+            points += val;
+            updatePointsDisplay();
+            updateProgressBar();
+            updateUnitLocks();
+            checkCompletionAndTriggerConfetti();
+        }
+
+        function updatePointsDisplay() {
+            document.getElementById("totalPoints").innerText = points;
+        }
+
+        function updateProgressBar() {
+            let percent = Math.min(100, Math.round((points / 80) * 100));
+            const pText = document.getElementById("progressPercentText");
+            const pBar = document.getElementById("progressBarFill");
+            if(pText) pText.innerText = percent + "%";
+            if(pBar) pBar.style.width = percent + "%";
+
+            const certBtn = document.getElementById("certBtn");
+            if(certBtn) {
+                certBtn.disabled = percent < 100;
+            }
+        }
+
+        function checkCompletionAndTriggerConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+
+        function saveStudentDataToStorage() {
+            if(!studentName) return;
+            studentsDatabase[studentName] = {
+                points: points,
+                progress: Math.min(100, Math.round((points / 80) * 100)),
+                completedUnits: completedUnits,
+                answeredQuestions: answeredQuestions
+            };
+            localStorage.setItem("studentsDatabase_grade3_no_dummy", JSON.stringify(studentsDatabase));
+            updateLeaderboard();
+        }
+
+        function updateLeaderboard() {
+            const list = document.getElementById("leaderboardList");
+            if(!list) return;
+            const entries = Object.entries(studentsDatabase);
+            if(entries.length === 0) {
+                list.innerHTML = `<li style="justify-content: center; color: #64748b;">لا توجد مشاركات حتى الآن. كوني أول المشاركات! 🌟</li>`;
+                return;
+            }
+
+            entries.sort((a,b) => b[1].points - a[1].points);
+            list.innerHTML = "";
+            entries.forEach(([name, data], idx) => {
+                let medal = idx === 0 ? "🥇" : (idx === 1 ? "🥈" : (idx === 2 ? "🥉" : "⭐"));
+                list.innerHTML += `
+                    <li>
+                        <span>${medal} ${name}</span>
+                        <span style="color: #d97706;">${data.points} نقطة</span>
+                    </li>
+                `;
+            });
+        }
+
+        function openTeacherLogin() {
+            const pinInput = document.getElementById("teacherPinInput");
+            if(pinInput) {
+                pinInput.value = "";
+                document.getElementById("teacherLoginModal").classList.remove("hidden");
+                pinInput.focus();
+            }
+        }
+
+        function closeTeacherLogin() {
+            document.getElementById("teacherLoginModal").classList.add("hidden");
+        }
+
+        function verifyTeacherPin() {
+            const pinInput = document.getElementById("teacherPinInput");
+            if(!pinInput) return;
+            const pin = pinInput.value.trim();
+            if (pin === TEACHER_SECRET_PIN) {
+                closeTeacherLogin();
+                openTeacherDashboard();
+            } else {
+                alert("الرمز السري غير صحيح! الوصول مقتصر على معلمة المادة فقط.");
+                pinInput.value = "";
+                pinInput.focus();
+            }
+        }
+
+        function openTeacherDashboard() {
+            refreshTeacherTable();
+            document.getElementById("teacherDashboardModal").classList.remove("hidden");
+        }
+
+        function closeTeacherDashboard() {
+            document.getElementById("teacherDashboardModal").classList.add("hidden");
+        }
+
+        function refreshTeacherTable(filterText = "") {
+            const tbody = document.getElementById("teacherStudentsTableBody");
+            if(!tbody) return;
+            tbody.innerHTML = "";
+            const entries = Object.entries(studentsDatabase);
+            
+            let totalStudents = entries.length;
+            let maxPts = 0;
+            let totalProgSum = 0;
+
+            if (totalStudents === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 15px; color:#64748b;">لا توجد سجلات طالبات مسجلات حتى الآن.</td></tr>`;
+                document.getElementById("statCount").innerText = 0;
+                document.getElementById("statMaxPoints").innerText = 0;
+                document.getElementById("statAvgProgress").innerText = "0%";
+                return;
+            }
+
+            let filtered = entries.filter(([name]) => name.includes(filterText));
+
+            filtered.forEach(([name, data]) => {
+                if(data.points > maxPts) maxPts = data.points;
+                totalProgSum += (data.progress || 0);
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-weight:bold;">${name}</td>
+                        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align:center; color:#d97706; font-weight:bold;">${data.points}</td>
+                        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align:center;">${data.progress || 0}%</td>
+                        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align:center;">
+                            <span style="background: ${data.progress >= 100 ? '#dcfce7' : '#fef3c7'}; color: ${data.progress >= 100 ? '#166534' : '#b45309'}; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem;">
+                                ${data.progress >= 100 ? 'مكتملة 🏆' : 'نشطة 📚'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById("statCount").innerText = totalStudents;
+            document.getElementById("statMaxPoints").innerText = maxPts;
+            document.getElementById("statAvgProgress").innerText = Math.round(totalProgSum / totalStudents) + "%";
+        }
+
+        function filterTeacherTable() {
+            const query = document.getElementById("teacherSearchInput").value.trim();
+            refreshTeacherTable(query);
+        }
+
+        function exportToCSV() {
+            let csvContent = "\uFEFFاسم الطالبة,النقاط,التقدم\n";
+            Object.entries(studentsDatabase).forEach(([name, data]) => {
+                csvContent += `"${name}",${data.points},"${data.progress || 0}%"\n`;
+            });
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "student_performance_grade3_report.csv";
+            a.click();
+        }
+
+        function resetStudentData() {
+            if(confirm("هل أنتِ متأكدة من رغبتك في حذف وإعادة ضبط سجل بيانات الطالبات بالكامل؟")) {
+                studentsDatabase = {};
+                localStorage.removeItem("studentsDatabase_grade3_no_dummy");
+                refreshTeacherTable();
+                updateLeaderboard();
+                alert("تم إعادة ضبط السجل بنجاح.");
+            }
+        }
+
+        function showCertificateModal() {
+            document.getElementById("certStudentName").innerText = studentName;
+            document.getElementById("certPoints").innerText = points;
+            document.getElementById("certificateModal").classList.remove("hidden");
+            if (typeof confetti === 'function') {
+                confetti({ particleCount: 150, spread: 90, origin: { y: 0.5 } });
+            }
+        }
+
+        function closeCertificateModal() {
+            document.getElementById("certificateModal").classList.add("hidden");
+        }
+    </script>
+</body>
+</html>
