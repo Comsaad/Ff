@@ -141,6 +141,22 @@
         .stat-card-lbl { font-size: 0.8rem; color: #64748b; }
 
         .toast-notification { position: fixed; bottom: 20px; left: 20px; background: #1e293b; color: white; padding: 12px 20px; border-radius: 10px; font-size: 0.95rem; box-shadow: 0 6px 20px rgba(0,0,0,0.2); z-index: 2000; transition: opacity 0.3s ease; }
+        
+        .btn-delete-student {
+            background-color: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+            padding: 5px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .btn-delete-student:hover {
+            background-color: #ef4444;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -148,7 +164,7 @@
     <header>
         <div class="school-title">📖 المتوسطة التاسعة والثانية لتحفيظ القرآن الكريم بالدلم</div>
         <h1>منصة نحو القمة 🚀 - المهارات الرقمية (الصف الثالث المتوسط)</h1>
-        <p>إشراف المعلمة: منيرة السعيدان | تعلم، تفاعل، وأبدع 💡</p>
+        <p>إشراف المعلمة: منيرة السعيدان | تعلم, تفاعل, وأبدع 💡</p>
         <div class="cloud-status" id="cloudStatusBadge">
             <span class="status-dot" id="statusDot"></span>
             <span id="statusText">جاري الاتصال بقاعدة البيانات السحابية...</span>
@@ -259,7 +275,7 @@
     </div>
 
     <div id="teacherDashboardModal" class="modal-overlay hidden">
-        <div class="modal-content" style="max-width: 750px; text-align: right;">
+        <div class="modal-content" style="max-width: 850px; text-align: right;">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px;">
                 <h3 style="color: #0f766e; margin:0;">📊 لوحة متابعة الطالبات السحابية (المعلمة: منيرة السعيدان)</h3>
                 <button class="btn btn-danger" style="padding: 4px 10px; font-size: 0.8rem;" onclick="closeTeacherDashboard()">إغلاق</button>
@@ -293,6 +309,7 @@
                             <th style="padding: 10px; border-bottom: 1px solid #cbd5e1; text-align:center;">النقاط</th>
                             <th style="padding: 10px; border-bottom: 1px solid #cbd5e1; text-align:center;">التقدم</th>
                             <th style="padding: 10px; border-bottom: 1px solid #cbd5e1; text-align:center;">الحالة</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #cbd5e1; text-align:center;">إجراء</th>
                         </tr>
                     </thead>
                     <tbody id="teacherStudentsTableBody">
@@ -340,7 +357,6 @@
             getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, serverTimestamp 
         } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
 
-        // إعدادات مشروعك المحدّثة
         const firebaseConfig = {
             apiKey: "AIzaSyDu3VnL-YhKjoHShN23wkEzmjx01g3K0LM",
             authDomain: "nhoalgomah.firebaseapp.com",
@@ -441,7 +457,7 @@
                     { type: "mcq", question: "ما هي الأداة في أكسس التي تُمكّن المستخدم من إدخال البيانات وتحريرها وعرضها عبر واجهة رسومية منسقة؟", options: ["الاستعلام (Query)", "التقرير (Report)", "النموذج (Form)", "الجدول"], correct: 2, points: 10 }
                 ],
                 flashcards: [
-                    { q: "ما هو الفرق بين الاستعلام (Query) والتقرير (Report)؟", a: "الاستعلام يُستخدم لاسترجاع بيانات محددة وفق معايير يحددها المستخدم، بينما التقرير يُستخدم لعرض البيانات وتنسيقها وطباعتها بأشكال جذابة." }
+                    { q: "ما هو الفرق بين الاستعلام (Query) والتقرير (Report)؟", a: "الاستعلام يُستخدم لاسترجاع بيانات محددة وفق معايير يحددها المستخدم, بينما التقرير يُستخدم لعرض البيانات وتنسيقها وطباعتها بأشكال جذابة." }
                 ]
             },
             3: {
@@ -482,7 +498,10 @@
         let studentsDatabase = {};
 
         function normalizeDocId(name) {
-            return name.trim().replace(/\s+/g, "_").replace(/[\/\.#$\[\]]/g, "");
+            // إضافة طابع زمني أو رقم فريد لمنع الكتابة فوق المحاولات السابقة عند تسجيل الدخول المتكرر
+            const timestamp = new Date().getTime().toString(36);
+            const cleanName = name.trim().replace(/\s+/g, "_").replace(/[\/\.#$\[\]]/g, "");
+            return `${cleanName}_${timestamp}`;
         }
 
         function startRealtimeListener() {
@@ -493,9 +512,11 @@
                 studentsDatabase = {};
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data();
-                    const displayStudentName = data.name || docSnap.id.replace(/_/g, " ");
-                    studentsDatabase[displayStudentName] = {
+                    // استرجاع الاسم الأصلي مع إزالة الطابع الزمني المضاف للمعرف
+                    const rawName = data.name || docSnap.id.replace(/_[a-z0-9]+$/, "").replace(/_/g, " ");
+                    studentsDatabase[docSnap.id] = {
                         docId: docSnap.id,
+                        name: rawName,
                         points: data.points || 0,
                         progress: data.progress || 0,
                         completedUnits: data.completedUnits || { 1: false, 2: false, 3: false, 4: false },
@@ -517,18 +538,15 @@
         async function saveStudentDataToFirestore() {
             if (!studentName) return;
             const progressVal = Math.min(100, Math.round((points / 80) * 100));
-            const docId = normalizeDocId(studentName);
-
-            studentsDatabase[studentName] = {
-                docId: docId, points: points, progress: progressVal,
-                completedUnits: completedUnits, answeredQuestions: answeredQuestions
-            };
+            
+            // عند الحفظ، نستخدم Document ID فريد للمحاولة الحالية
+            const currentDocId = sessionStorage.getItem("current_student_doc_id");
 
             if (!isFirebaseReady || !db) return;
 
             try {
                 updateConnectionUI("connected", "جاري حفظ البيانات سحابياً... ☁️");
-                const studentRef = doc(db, COLLECTION_NAME, docId);
+                const studentRef = doc(db, COLLECTION_NAME, currentDocId);
                 await setDoc(studentRef, {
                     name: studentName, points: points, progress: progressVal,
                     completedUnits: completedUnits, answeredQuestions: answeredQuestions,
@@ -551,41 +569,19 @@
                 return;
             }
 
-            // نظام القفل الأمني للجهاز
-            const storedDeviceStudent = localStorage.getItem("locked_student_name_grade3");
-            if (storedDeviceStudent && storedDeviceStudent !== inputVal) {
-                alert(`⚠️ تنبيه أمني: هذا الجهاز مرتبط مسبقاً بحساب الطالبة (${storedDeviceStudent}). لا يمكن تسجيل الدخول بحساب آخر.`);
-                return;
-            }
-
             studentName = inputVal;
-            localStorage.setItem("locked_student_name_grade3", studentName); // قفل الجهاز
+            const uniqueDocId = normalizeDocId(studentName);
+            sessionStorage.setItem("current_student_doc_id", uniqueDocId);
 
             document.getElementById("displayName").innerText = studentName;
             loginBtn.disabled = true;
-            loginBtn.innerText = "جاري استرجاع بياناتك... ⏳";
+            loginBtn.innerText = "جاري تهيئة جلستك... ⏳";
 
-            const docId = normalizeDocId(studentName);
-
-            if (isFirebaseReady && db) {
-                try {
-                    const studentRef = doc(db, COLLECTION_NAME, docId);
-                    const docSnap = await getDoc(studentRef);
-                    if (docSnap.exists()) {
-                        const sData = docSnap.data();
-                        points = sData.points || 0;
-                        completedUnits = sData.completedUnits || { 1: false, 2: false, 3: false, 4: false };
-                        answeredQuestions = sData.answeredQuestions || {};
-                        showToast(`مرحباً بعودتك يا ${studentName}! تم استرجاع نقاطك 🌟`);
-                    } else {
-                        points = 0; completedUnits = { 1: false, 2: false, 3: false, 4: false }; answeredQuestions = {};
-                        await saveStudentDataToFirestore();
-                    }
-                } catch (error) {
-                    console.error("خطأ أثناء جلب البيانات:", error);
-                    points = 0; completedUnits = { 1: false, 2: false, 3: false, 4: false }; answeredQuestions = {};
-                }
-            }
+            // تهيئة بيانات جديدة تماماً لهذه المحاولة
+            points = 0;
+            completedUnits = { 1: false, 2: false, 3: false, 4: false };
+            answeredQuestions = {};
+            await saveStudentDataToFirestore();
 
             loginBtn.disabled = false; loginBtn.innerText = "دخول المنصة 🚀";
             updatePointsDisplay(); updateProgressBar(); updateUnitLocks();
@@ -603,9 +599,8 @@
 
         window.logoutStudent = async function() {
             await saveStudentDataToFirestore();
-            // لإلغاء القفل الأمني عند تسجيل الخروج (اختياري حسب رغبتك):
-            // localStorage.removeItem("locked_student_name_grade3");
             studentName = ""; points = 0; answeredQuestions = {}; completedUnits = { 1: false, 2: false, 3: false, 4: false };
+            sessionStorage.removeItem("current_student_doc_id");
             document.getElementById("studentNameInput").value = "";
             document.getElementById("mainPlatform").classList.add("hidden");
             document.getElementById("loginSection").classList.remove("hidden");
@@ -662,7 +657,7 @@
                 videosGrid.innerHTML += `
                     <div class="item-card">
                         <div class="video-container">
-                            <iframe src="${v.url}" title="${v.title}" allow="accelerometer; autoplay; clip" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                            <iframe src="${v.url}" title="${v.title}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
                         </div>
                         <h4 style="margin: 5px 0 0 0; font-size: 1rem; color:#1e293b;">${v.title}</h4>
                     </div>
@@ -806,9 +801,9 @@
 
             entries.sort((a,b) => b[1].points - a[1].points);
             list.innerHTML = "";
-            entries.forEach(([name, data], idx) => {
-                let medal = idx === 0 ? "🥇" : (idx === 1 ? "🥈" : (idx === 2 ? "🥉" : "⭐"));
-                list.innerHTML += `<li><span>${medal} ${name}</span><span style="color: #d97706;">${data.points} نقطة</span></li>`;
+            entries.forEach(([docId, data]) => {
+                let medal = "⭐";
+                list.innerHTML += `<li><span>${medal} ${data.name}</span><span style="color: #d97706;">${data.points} نقطة</span></li>`;
             });
         }
 
@@ -839,22 +834,25 @@
             let totalProgSum = 0;
 
             if (totalStudents === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 15px; color:#64748b;">لا توجد سجلات طالبات في السحابة.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 15px; color:#64748b;">لا توجد سجلات طالبات في السحابة.</td></tr>`;
                 document.getElementById("statCount").innerText = 0; document.getElementById("statMaxPoints").innerText = 0; document.getElementById("statAvgProgress").innerText = "0%";
                 return;
             }
 
             entries.sort((a, b) => b[1].points - a[1].points);
-            let filtered = entries.filter(([name]) => name.includes(filterText));
+            let filtered = entries.filter(([, data]) => data.name.includes(filterText));
             entries.forEach(([, data]) => { if(data.points > maxPts) maxPts = data.points; totalProgSum += (data.progress || 0); });
 
-            filtered.forEach(([name, data]) => {
+            filtered.forEach(([docId, data]) => {
                 tbody.innerHTML += `
                     <tr>
-                        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-weight:bold;">${name}</td>
+                        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-weight:bold;">${data.name}</td>
                         <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align:center; color:#d97706; font-weight:bold;">${data.points}</td>
                         <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align:center;">${data.progress || 0}%</td>
                         <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align:center;"><span style="background: ${data.progress >= 100 ? '#dcfce7' : '#fef3c7'}; color: ${data.progress >= 100 ? '#166534' : '#b45309'}; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem;">${data.progress >= 100 ? 'مكتملة 🏆' : 'نشطة 📚'}</span></td>
+                        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align:center;">
+                            <button class="btn-delete-student" onclick="deleteStudentEntry('${docId}', '${data.name}')">🗑️ حذف</button>
+                        </td>
                     </tr>
                 `;
             });
@@ -863,11 +861,25 @@
             document.getElementById("statAvgProgress").innerText = Math.round(totalProgSum / totalStudents) + "%";
         }
 
+        // دالة حذف طالبة معينة من السحابة
+        window.deleteStudentEntry = async function(docId, studentName) {
+            if (!isFirebaseReady || !db) return;
+            if(confirm(`هل أنتِ متأكدة من رغبتك في حذف سجل الطالبة (${studentName}) نهائياً من قاعدة البيانات؟`)) {
+                try {
+                    await deleteDoc(doc(db, COLLECTION_NAME, docId));
+                    showToast(`🗑️ تم حذف سجل الطالبة ${studentName} بنجاح`);
+                } catch (error) {
+                    console.error("خطأ أثناء حذف السجل:", error);
+                    alert("حدث خطأ أثناء محاولة حذف السجل.");
+                }
+            }
+        };
+
         window.filterTeacherTable = function() { refreshTeacherTable(document.getElementById("teacherSearchInput").value.trim()); };
 
         window.exportToCSV = function() {
             let csvContent = "\uFEFFاسم الطالبة,النقاط,التقدم\n";
-            Object.entries(studentsDatabase).forEach(([name, data]) => { csvContent += `"${name}",${data.points},"${data.progress || 0}%"\n`; });
+            Object.entries(studentsDatabase).forEach(([, data]) => { csvContent += `"${data.name}",${data.points},"${data.progress || 0}%"\n`; });
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a"); a.href = url; a.download = "student_performance_grade3_report.csv"; a.click();
@@ -891,7 +903,7 @@
             if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 90, origin: { y: 0.5 } });
         };
 
-        window.closeCertificateModal = function() { document.getElementById("certificateModal").classList.add("hidden"); };
+        window.closeCertificateModal = function() { document.getElementById("certificateModal").classList.remove("hidden"); };
     </script>
 </body>
 </html>
